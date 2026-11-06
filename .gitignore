@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+delter-data/
+.env
+.pytest_cache/
+
+.coverage
+*.log
+.idea/
+.vscode/

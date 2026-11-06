@@ -1,0 +1,60 @@
+# docker compose up --build        -> gateway on http://localhost:8000 (docs at /docs)
+# Scale a worker later, e.g.: docker compose up --scale probe_mgt=3
+# (needs a shared database/storage first: see "Scaling later" in README.md)
+x-service: &service
+  build: .
+  environment: &env
+    DELTER_REDIS_URL: redis://redis:6379/0
+    DELTER_DATA_DIR: /data
+    DELTER_RUN_MGT_URL: http://run_mgt:8001
+    DELTER_CRAWL_MGT_URL: http://crawl_mgt:8002
+    DELTER_DETECT_MGT_URL: http://detect_mgt:8003
+    DELTER_PROBE_MGT_URL: http://probe_mgt:8004
+    DELTER_EVIDENCE_MGT_URL: http://evidence_mgt:8005
+  depends_on: [redis]
+  restart: unless-stopped
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  gateway:
+    <<: *service
+    ports: ["8000:8000"]
+    command: uvicorn --factory gateway.gateway_main:create_app --host 0.0.0.0 --port 8000
+
+  run_mgt:
+    <<: *service
+    command: uvicorn --factory run_mgt.run_mgt_main:create_app --host 0.0.0.0 --port 8001
+    volumes: ["run_data:/data"]
+
+  crawl_mgt:
+    <<: *service
+    command: uvicorn --factory crawl_mgt.crawl_mgt_main:create_app --host 0.0.0.0 --port 8002
+    volumes: ["crawl_data:/data"]
+    shm_size: "1gb"
+
+  detect_mgt:
+    <<: *service
+    command: uvicorn --factory detect_mgt.detect_mgt_main:create_app --host 0.0.0.0 --port 8003
+    volumes: ["detect_data:/data"]
+    shm_size: "1gb"
+
+  probe_mgt:
+    <<: *service
+    command: uvicorn --factory probe_mgt.probe_mgt_main:create_app --host 0.0.0.0 --port 8004
+    volumes: ["probe_data:/data"]
+    shm_size: "1gb"
+
+  evidence_mgt:
+    <<: *service
+    command: uvicorn --factory evidence_mgt.evidence_mgt_main:create_app --host 0.0.0.0 --port 8005
+    volumes: ["evidence_data:/data"]
+
+volumes:
+  run_data:
+  crawl_data:
+  detect_data:
+  probe_data:
+  evidence_data:
